@@ -11,6 +11,12 @@ metadata:
 rules:
   - apiGroups: [""]
     resources: ["pods", "nodes", "endpoints"]
+    verbs: ["list", "watch", "get"]
+  - apiGroups: [""]
+    resources: ["pods/logs"]
+    verbs: ["get"]
+  - apiGroups: [""]
+    resources: ["services"]
     verbs: ["list", "watch"]
   - apiGroups: ["apps"]
     resources: ["replicasets"]
@@ -59,7 +65,22 @@ data:
             "metrics_collection_interval": 60
           }
         },
-        "force_flush_interval": 5
+        "force_flush_interval": 5,
+        "logs_collected": {
+          "files": {
+            "collect_list": [
+              {
+                "file_path": "/var/log/containers/*coworking*.log",
+                "log_group_name": "/aws/containerinsights/coworking-cluster/application",
+                "log_stream_name": "{pod_name}.{container_name}",
+                "timestamp_format": "%Y-%m-%dT%H:%M:%S.%fZ",
+                "timezone": "UTC",
+                "multi_line_start_pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}",
+                "encoding": "utf-8"
+              }
+            ]
+          }
+        }
       }
     }
 ---
@@ -118,6 +139,12 @@ spec:
             - name: devdisk
               mountPath: /dev/disk
               readOnly: true
+            - name: containerlog
+              mountPath: /var/log/containers
+              readOnly: true
+            - name: pods
+              mountPath: /var/log/pods
+              readOnly: true
       volumes:
         - name: cwagentconfig
           configMap:
@@ -137,5 +164,11 @@ spec:
         - name: devdisk
           hostPath:
             path: /dev/disk/
+        - name: containerlog
+          hostPath:
+            path: /var/log/containers
+        - name: pods
+          hostPath:
+            path: /var/log/pods
       terminationGracePeriodSeconds: 60
       serviceAccountName: cloudwatch-agent 
